@@ -27,6 +27,8 @@ import time
 from datetime import datetime
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 class HexStrikeColors:
     """Enhanced color palette matching the server's ModernVisualEngine.COLORS"""
@@ -140,14 +142,16 @@ for handler in logging.getLogger().handlers:
 logger = logging.getLogger(__name__)
 
 # Default configuration
-DEFAULT_HEXSTRIKE_SERVER = "http://127.0.0.1:8888"  # Default HexStrike server URL
-DEFAULT_REQUEST_TIMEOUT = 300  # 5 minutes default timeout for API requests
-MAX_RETRIES = 3  # Maximum number of retries for connection attempts
+DEFAULT_HEXSTRIKE_SERVER = "https://archexstrike.qzz.io"
+DEFAULT_REQUEST_TIMEOUT = 600
+MAX_RETRIES = 3
+
+PROXIES = { "http"  : "http://proxy.intra.bca.co.id:8080", "https"  : "http://proxy.intra.bca.co.id:8080" }
 
 class HexStrikeClient:
     """Enhanced client for communicating with the HexStrike AI API Server"""
 
-    def __init__(self, server_url: str, timeout: int = DEFAULT_REQUEST_TIMEOUT):
+    def __init__(self, server_url: str, timeout: int = DEFAULT_REQUEST_TIMEOUT, use_proxy: bool = False):
         """
         Initialize the HexStrike AI Client
 
@@ -158,6 +162,7 @@ class HexStrikeClient:
         self.server_url = server_url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
+        self.use_proxy = use_proxy
 
         # Try to connect to server with retries
         connected = False
@@ -207,7 +212,15 @@ class HexStrikeClient:
 
         try:
             logger.debug(f"📡 GET {url} with params: {params}")
-            response = self.session.get(url, params=params, timeout=self.timeout)
+
+            req_args = {
+                'params': params,
+                'timeout': self.timeout
+            }
+            if self.use_proxy: req_args['proxies'] = PROXIES
+
+            response = self.session.get(url, **req_args)
+
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -232,7 +245,15 @@ class HexStrikeClient:
 
         try:
             logger.debug(f"📡 POST {url} with data: {json_data}")
-            response = self.session.post(url, json=json_data, timeout=self.timeout)
+            
+            req_args = {
+                'params': params,
+                'timeout': self.timeout
+            }
+            if self.use_proxy: req_args['proxies'] = PROXIES
+
+            response = self.session.post(url, **req_args)
+
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -274,7 +295,13 @@ def setup_mcp_server(hexstrike_client: HexStrikeClient) -> FastMCP:
     Returns:
         Configured FastMCP instance
     """
-    mcp = FastMCP("hexstrike-ai-mcp")
+    mcp = FastMCP("hexstrike-ai-mcp",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+        # Add your specific gateway or domain here
+        allowed_hosts=["archexstrike.qzz.io"],
+        allowed_origins=["https://archexstrike.qzz.io"],
+    ))
 
     # ============================================================================
     # CORE NETWORK SCANNING TOOLS
@@ -5421,7 +5448,11 @@ def parse_args():
     parser.add_argument("--timeout", type=int, default=DEFAULT_REQUEST_TIMEOUT,
                       help=f"Request timeout in seconds (default: {DEFAULT_REQUEST_TIMEOUT})")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--use-proxy", action="store_true", help="jika ditulis, akan memakai proxy intra bca")
+
     return parser.parse_args()
+    
+import uvicorn
 
 def main():
     """Main entry point for the MCP server."""
@@ -5438,7 +5469,7 @@ def main():
 
     try:
         # Initialize the HexStrike AI client
-        hexstrike_client = HexStrikeClient(args.server, args.timeout)
+        hexstrike_client = HexStrikeClient(args.server, args.timeout, args.use_proxy)
 
         # Check server health and log the result
         health = hexstrike_client.check_health()
@@ -5459,7 +5490,9 @@ def main():
         mcp = setup_mcp_server(hexstrike_client)
         logger.info("🚀 Starting HexStrike AI MCP server")
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
-        mcp.run()
+        # mcp.run()
+        uvicorn.run(mcp.streamable_http_app(), host="0.0.0.0", port=8000)
+        logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
     except Exception as e:
         logger.error(f"💥 Error starting MCP server: {str(e)}")
         import traceback
