@@ -5525,8 +5525,8 @@ def main():
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
         
         # mcp.run()
-        app = mcp.http_app()
-        # app.add_middleware(MCPRequestLoggerMiddleware)
+        app = mcp.streamable_http_app()
+        app.add_middleware(MCPRequestLoggerMiddleware)
         uvicorn.run(app, host="0.0.0.0", port=8000)
 
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
