@@ -213,15 +213,9 @@ class HexStrikeClient:
 
         try:
             logger.debug(f"📡 GET {url} with params: {params}")
-
-            req_args = {
-                'params': params,
-                'timeout': self.timeout
-            }
-            if self.use_proxy: req_args['proxies'] = PROXIES
-
-            response = self.session.get(url, **req_args)
-
+            
+            response = self.session.get(url, params=params, timeout=self.timeout)
+            
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -246,14 +240,8 @@ class HexStrikeClient:
 
         try:
             logger.debug(f"📡 POST {url} with data: {json_data}")
-            
-            req_args = {
-                'params': params,
-                'timeout': self.timeout
-            }
-            if self.use_proxy: req_args['proxies'] = PROXIES
 
-            response = self.session.post(url, **req_args)
+            response = self.session.post(url, json=json_data, timeout=self.timeout)
 
             response.raise_for_status()
             return response.json()
