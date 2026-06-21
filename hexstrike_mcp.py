@@ -300,8 +300,8 @@ def setup_mcp_server(hexstrike_client: HexStrikeClient) -> FastMCP:
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=False,
         # Add your specific gateway or domain here
-        allowed_hosts=["archexstrike.qzz.io"],
-        allowed_origins=["https://archexstrike.qzz.io"],
+        # allowed_hosts=["archexstrike.qzz.io"],
+        # allowed_origins=["https://archexstrike.qzz.io"],
     ))
 
     # ============================================================================
@@ -5525,8 +5525,8 @@ def main():
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
         
         # mcp.run()
-        app = mcp.streamable_http_app()
-        app.add_middleware(MCPRequestLoggerMiddleware)
+        app = mcp.http_app()
+        # app.add_middleware(MCPRequestLoggerMiddleware)
         uvicorn.run(app, host="0.0.0.0", port=8000)
 
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
