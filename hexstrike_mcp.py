@@ -142,7 +142,7 @@ for handler in logging.getLogger().handlers:
 logger = logging.getLogger(__name__)
 
 # Default configuration
-DEFAULT_HEXSTRIKE_SERVER = "https://127.0.0.1:8888"
+DEFAULT_HEXSTRIKE_SERVER = "http://127.0.0.1:8888"
 DEFAULT_REQUEST_TIMEOUT = 600
 MAX_RETRIES = 3
 
