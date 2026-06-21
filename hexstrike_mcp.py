@@ -16,6 +16,9 @@ RECENT ENHANCEMENTS (v6.0):
 Architecture: MCP Client for AI agent communication with HexStrike server
 Framework: FastMCP integration for tool orchestration
 """
+import json
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 import sys
 import os
@@ -5449,6 +5452,38 @@ def parse_args():
     parser.add_argument("--use-proxy", action="store_true", help="jika ditulis, akan memakai proxy intra bca")
 
     return parser.parse_args()
+
+class MCPRequestLoggerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # baca raw body request
+        raw_body = await request.body()
+
+        logger.info("========== RAW MCP HTTP REQUEST ==========")
+        logger.info("Method: %s", request.method)
+        logger.info("URL: %s", request.url)
+        logger.info("Headers: %s", dict(request.headers))
+
+        try:
+            body_text = raw_body.decode("utf-8", errors="replace")
+            logger.info("Raw Body:\n%s", body_text)
+
+            # kalau JSON, prettify
+            try:
+                parsed = json.loads(body_text)
+                logger.info("Parsed JSON Body:\n%s", json.dumps(parsed, indent=2, ensure_ascii=False))
+            except Exception:
+                pass
+
+        except Exception as e:
+            logger.error("Failed to read request body: %s", e)
+
+        # lanjutkan request ke MCP app
+        response = await call_next(request)
+
+        logger.info("========== MCP HTTP RESPONSE ==========")
+        logger.info("Status code: %s", response.status_code)
+
+        return response
     
 import uvicorn
 
@@ -5488,8 +5523,12 @@ def main():
         mcp = setup_mcp_server(hexstrike_client)
         logger.info("🚀 Starting HexStrike AI MCP server")
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
+        
         # mcp.run()
-        uvicorn.run(mcp.streamable_http_app(), host="0.0.0.0", port=8000)
+        app = mcp.streamable_http_app()
+        app.add_middleware(MCPRequestLoggerMiddleware)
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+
         logger.info("🤖 Ready to serve AI agents with enhanced cybersecurity capabilities")
     except Exception as e:
         logger.error(f"💥 Error starting MCP server: {str(e)}")
